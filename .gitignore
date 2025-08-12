@@ -1,0 +1,32 @@
+# Python
+# Ignora arquivos de bytecode do Python
+__pycache__/
+*.pyc
+
+# Ignora o ambiente virtual
+.venv/
+venv/
+env/
+
+# Ignora dependências instaladas (pip)
+# É melhor instalar as dependências via 'requirements.txt'
+*.egg-info/
+
+# Ignora arquivos gerados por bibliotecas
+# Playwright
+data/pdfs/ # Ignora os PDFs que são gerados pelo scraper
+
+# ChromaDB (banco de dados vetorial)
+.chroma/
+chroma.sqlite3
+
+# Dados confidenciais
+# As chaves de API devem ser ignoradas
+.env
+
+# Ignora arquivos gerados pelo FastAPI/Uvicorn
+.pytest_cache/
+
+# Outros arquivos do sistema
+.DS_Store
+Thumbs.db

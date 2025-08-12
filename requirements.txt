@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+langchain
+openai
+pydantic
+python-dotenv
+tiktoken
+chromadb
+playwright
+pymupdf
+
+
+langchain-community

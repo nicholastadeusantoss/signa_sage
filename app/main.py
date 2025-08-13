@@ -1,5 +1,5 @@
 # app/main.py
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 
 from .chatbot import SignaChatbot
 from .scraping import scrape_to_text, scrape_single_page_to_text
@@ -42,10 +43,20 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("A chave da API da OpenAI não foi encontrada. Verifique seu arquivo .env.")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Código executado na inicialização
+    initialize_chatbot()
+    yield
+    # Código executado no encerramento
+    if executor:
+        executor.shutdown(wait=True)
+
 app = FastAPI(
     title="Signa Chatbot",
     description="API para o chatbot da empresa Signa.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan # Usa o lifespan event handler
 )
 
 # Adiciona o middleware de CORS
@@ -69,10 +80,10 @@ class Question(BaseModel):
 class UrlPayload(BaseModel):
     url: str
 
-def run_scraping_full_in_thread():
+def run_scraping_full_in_thread(max_pages_to_scrape):
     global scraping_in_progress
     try:
-        scrape_to_text(progress_tracker=scraping_progress)
+        scrape_to_text(max_pages=max_pages_to_scrape, progress_tracker=scraping_progress)
         initialize_chatbot()
     except Exception as e:
         print(f"Erro ao executar a tarefa de scraping: {e}")
@@ -89,21 +100,17 @@ def run_single_scraping_in_thread(url):
     finally:
         scraping_in_progress = False
 
-@app.on_event("startup")
-def on_startup():
-    initialize_chatbot()
-
 @app.get("/scrape")
-def start_full_scrape():
+def start_full_scrape(max_pages: int = Query(50)):
     global scraping_in_progress, chatbot_ready, scraping_progress
     if scraping_in_progress:
         raise HTTPException(status_code=409, detail="Scraping já está em andamento.")
     
-    scraping_progress = {"pages_scraped": 0, "total_pages": 50} 
+    scraping_progress = {"pages_scraped": 0, "total_pages": max_pages} 
     scraping_in_progress = True
     chatbot_ready = False
     
-    executor.submit(run_scraping_full_in_thread)
+    executor.submit(run_scraping_full_in_thread, max_pages)
     
     return {"status": "success", "message": "Scraping iniciado. O chatbot estará disponível em breve."}
 

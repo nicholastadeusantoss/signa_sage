@@ -1,4 +1,3 @@
-# app/chatbot.py
 import os
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
@@ -6,7 +5,26 @@ from langchain_openai import OpenAI
 from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import TextLoader
+from langchain.prompts import PromptTemplate # Adicionado
 from pathlib import Path
+
+# Adiciona um prompt de segurança e anti-alucinação
+PROMPT_TEMPLATE = """
+Você é um chatbot da empresa Signa. Sua principal tarefa é responder a perguntas sobre a empresa, seus produtos e serviços, com base nas informações fornecidas no contexto abaixo.
+
+Diretrizes de Segurança e Privacidade:
+- Responda apenas com base no CONTEXTO fornecido. Não use conhecimento externo.
+- Se a resposta para a pergunta não estiver no CONTEXTO, diga "Não tenho informações sobre isso no momento.".
+- Não responda a perguntas sobre informações pessoais, dados de clientes ou qualquer conteúdo sensível (LGPD).
+- Recuse responder a perguntas sobre tópicos que possam ser perigosos, ilegais, antiéticos ou que promovam ódio.
+
+CONTEXTO: {context}
+
+PERGUNTA DO USUÁRIO: {question}
+
+Sua resposta:
+"""
+PROMPT = PromptTemplate(template=PROMPT_TEMPLATE, input_variables=["context", "question"])
 
 class SignaChatbot:
     def __init__(self, api_key: str):
@@ -30,8 +48,6 @@ class SignaChatbot:
         if not docs:
             raise ValueError("A lista de documentos está vazia. Nenhuma informação foi extraída dos arquivos de texto.")
 
-        # AVISO: AVISO: AVISO: Esta parte foi ajustada!
-        # Usando um separador mais inteligente para evitar chunks muito grandes
         text_splitter = CharacterTextSplitter(
             separator="\n\n",
             chunk_size=1000,
@@ -52,7 +68,8 @@ class SignaChatbot:
             llm=self.llm,
             chain_type="stuff",
             retriever=self.docsearch.as_retriever(search_kwargs={"k": 2}),
-            verbose=True
+            verbose=True,
+            chain_type_kwargs={"prompt": PROMPT} # O prompt é injetado aqui
         )
 
     def ask(self, question: str):

@@ -1,15 +1,16 @@
 # app/scraping.py
-import asyncio
+import requests
+from bs4 import BeautifulSoup
 import os
 import re
-from playwright.async_api import async_playwright
 from urllib.parse import urljoin, urlparse
 from collections import deque
 
 BASE_URL = "https://www.signa.pt/"
-OUTPUT_DIR = "data/pdfs"
-
-# Lista de URLs para acessar prioritariamente
+OUTPUT_DIR = "data/txt"
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
 PRIORITY_URLS = [
     "https://www.signa.pt/brindes/empresa.asp",
     "https://www.signa.pt/brindes/noticias.asp",
@@ -18,66 +19,60 @@ PRIORITY_URLS = [
     "https://www.signa.pt/brindes/contactos.asp"
 ]
 
-async def is_internal_url(url, base_url):
-    """Verifica se a URL pertence ao mesmo domínio."""
+def is_internal_url(url, base_url):
     return urlparse(url).netloc == urlparse(base_url).netloc
 
-async def scrape_to_pdf(max_pages=50):
-    """
-    Agente de web scraping que navega pelo site e salva cada página como PDF.
-    Começa com URLs de alta prioridade.
-    """
+def scrape_to_text(max_pages=50, progress_tracker=None):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
-    # Inicializa a fila com as URLs prioritárias e a URL base
     urls_to_visit = deque(PRIORITY_URLS)
     if BASE_URL not in urls_to_visit:
         urls_to_visit.append(BASE_URL)
-        
     visited_urls = set()
+    pages_scraped = 0
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-
-        while urls_to_visit and len(visited_urls) < max_pages:
-            url = urls_to_visit.popleft()
-            
-            if url in visited_urls:
-                continue
-            
-            visited_urls.add(url)
-            print(f"Navegando para: {url}")
-
-            try:
-                await page.goto(url, wait_until="networkidle")
-                
-                # ... (lógica para limpar e nomear o arquivo PDF, que já está correta) ...
-                file_name = url.replace(BASE_URL, "").replace("/", "_").replace(".html", "").replace(".asp", "")
-                file_name = re.sub(r'[?&:=]', '_', file_name)
-                file_name = file_name.replace('__', '_')
-                
-                if not file_name or file_name == '_':
-                    file_name = "index"
-                
-                output_path = os.path.join(OUTPUT_DIR, f"{file_name}.pdf")
-                
-                await page.pdf(path=output_path)
-                print(f"PDF salvo em: {output_path}")
-
-                # Encontra novos links para navegar (mantido como antes)
-                links = await page.eval_on_selector_all('a', '(links) => links.map(a => a.href)')
-                for link in links:
-                    absolute_url = urljoin(BASE_URL, link)
-                    if await is_internal_url(absolute_url, BASE_URL) and absolute_url not in visited_urls:
-                        urls_to_visit.append(absolute_url)
-
-            except Exception as e:
-                print(f"Erro ao processar {url}: {e}")
+    while urls_to_visit and pages_scraped < max_pages:
+        url = urls_to_visit.popleft()
+        if url in visited_urls:
+            continue
+        visited_urls.add(url)
+        pages_scraped += 1
+        print(f"Navegando para: {url} ({pages_scraped}/{max_pages})")
         
-        await browser.close()
-    
-    print("Download de PDFs concluído.")
+        if progress_tracker:
+            progress_tracker["pages_scraped"] = pages_scraped
+            progress_tracker["total_pages"] = max_pages
+        
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=10)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            # Remove scripts, estilos e outros elementos irrelevantes
+            for script_or_style in soup(['script', 'style', 'nav', 'footer', 'form', 'header']):
+                script_or_style.decompose()
 
-if __name__ == "__main__":
-    asyncio.run(scrape_to_pdf())
+            # Extrai o texto visível e o salva em um arquivo .txt
+            text = soup.get_text(separator=' ', strip=True)
+            
+            sanitized_name = re.sub(r'[\s\?&:=/#!]', '_', url.replace(BASE_URL, "")).replace('__', '_').strip('_')
+            if not sanitized_name:
+                sanitized_name = "index"
+            
+            file_name = f"{sanitized_name}.txt"
+            output_path = os.path.join(OUTPUT_DIR, file_name)
+
+            with open(output_path, "w", encoding="utf-8") as text_file:
+                text_file.write(text)
+            
+            print(f"Texto salvo em: {output_path}")
+
+            # Encontra novos links para navegação
+            for link in soup.find_all('a', href=True):
+                absolute_url = urljoin(BASE_URL, link.get('href'))
+                if is_internal_url(absolute_url, BASE_URL) and absolute_url not in visited_urls:
+                    urls_to_visit.append(absolute_url)
+
+        except requests.exceptions.RequestException as e:
+            print(f"Erro ao acessar {url}: {e}")
+            
+    print("Download de textos concluído.")

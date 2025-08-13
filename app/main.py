@@ -3,7 +3,38 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
 from .chatbot import SignaChatbot
+from .scraping import scrape_to_text
+
+# Variáveis globais para gerenciar o estado e o progresso
+signa_chatbot = None
+chatbot_ready = False
+scraping_in_progress = False
+scraping_progress = {"pages_scraped": 0, "total_pages": 50}
+executor = ThreadPoolExecutor(max_workers=1)
+
+def initialize_chatbot():
+    global signa_chatbot, chatbot_ready
+    print("Tentando inicializar o chatbot...")
+    try:
+        # A pasta de PDFs foi alterada para TXT
+        signa_chatbot = SignaChatbot(api_key=OPENAI_API_KEY)
+        chatbot_ready = True
+        print("Chatbot inicializado com sucesso!")
+    except FileNotFoundError as e:
+        print(f"Erro: {e}")
+        print("A base de conhecimento não foi encontrada. O chatbot permanecerá offline.")
+        signa_chatbot = None
+        chatbot_ready = False
+    except Exception as e:
+        print(f"Erro inesperado ao inicializar o chatbot: {e}")
+        signa_chatbot = None
+        chatbot_ready = False
 
 # Carrega as variáveis do .env
 load_dotenv()
@@ -12,38 +43,79 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("A chave da API da OpenAI não foi encontrada. Verifique seu arquivo .env.")
 
-# Inicializa o chatbot. Isso pode levar um tempo, pois ele processa todo o conteúdo.
-print("Inicializando o chatbot. Isso pode levar alguns minutos...")
-try:
-    signa_chatbot = SignaChatbot(api_key=OPENAI_API_KEY)
-except FileNotFoundError:
-    print("O arquivo 'signa_content.json' não foi encontrado. Por favor, execute o scraper.")
-    # Adicione uma lógica aqui para executar o scraper se quiser
-    signa_chatbot = None # Ou levante um erro para interromper a execução
-except Exception as e:
-    print(f"Erro ao inicializar o chatbot: {e}")
-    signa_chatbot = None
-
 app = FastAPI(
     title="Signa Chatbot",
     description="API para o chatbot da empresa Signa.",
     version="1.0.0"
 )
 
+# Adiciona o middleware de CORS
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Define o caminho absoluto para o diretório frontend
+BASE_DIR = Path(__file__).resolve().parent.parent
+frontend_path = str(BASE_DIR / "frontend")
+app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+
 class Question(BaseModel):
     question: str
 
+def run_scraping_in_thread():
+    """Função síncrona para ser executada em um thread."""
+    global scraping_in_progress
+    try:
+        scrape_to_text(progress_tracker=scraping_progress)
+        initialize_chatbot()
+    except Exception as e:
+        print(f"Erro ao executar a tarefa de scraping: {e}")
+    finally:
+        scraping_in_progress = False
+
+@app.on_event("startup")
+def on_startup():
+    initialize_chatbot()
+
+@app.get("/scrape")
+def start_scraping():
+    global scraping_in_progress, chatbot_ready, scraping_progress
+    if scraping_in_progress:
+        raise HTTPException(status_code=409, detail="Scraping já está em andamento.")
+    
+    # Reinicia o progresso e o estado
+    scraping_progress = {"pages_scraped": 0, "total_pages": 50} 
+    scraping_in_progress = True
+    chatbot_ready = False
+    print("Iniciando o processo de scraping...")
+
+    # Executa a função síncrona em um thread separado
+    executor.submit(run_scraping_in_thread)
+    
+    return {"status": "success", "message": "Scraping iniciado. O chatbot estará disponível em breve."}
+
+@app.get("/status")
+def get_status():
+    global scraping_in_progress, chatbot_ready, scraping_progress
+    return {
+        "scraping_in_progress": scraping_in_progress,
+        "chatbot_ready": chatbot_ready,
+        "progress": scraping_progress
+    }
+
 @app.get("/")
 def read_root():
-    return {"message": "Bem-vindo à API do Chatbot da Signa. Use o endpoint /chat para interagir."}
+    return {"message": "Bem-vindo à API do Chatbot da Signa. Use a URL /static/index.html para acessar a interface."}
 
 @app.post("/chat")
 def chat_with_bot(question: Question):
-    """
-    Endpoint para enviar uma pergunta ao chatbot.
-    """
-    if signa_chatbot is None:
-        raise HTTPException(status_code=500, detail="O chatbot não foi inicializado corretamente.")
+    if not chatbot_ready:
+        raise HTTPException(status_code=503, detail="O chatbot ainda não está disponível.")
     
     try:
         response = signa_chatbot.ask(question.question)

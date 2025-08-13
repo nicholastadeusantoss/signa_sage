@@ -9,7 +9,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 from .chatbot import SignaChatbot
-from .scraping import scrape_to_text
+from .scraping import scrape_to_text, scrape_single_page_to_text
 
 # Variáveis globais para gerenciar o estado e o progresso
 signa_chatbot = None
@@ -22,7 +22,6 @@ def initialize_chatbot():
     global signa_chatbot, chatbot_ready
     print("Tentando inicializar o chatbot...")
     try:
-        # A pasta de PDFs foi alterada para TXT
         signa_chatbot = SignaChatbot(api_key=OPENAI_API_KEY)
         chatbot_ready = True
         print("Chatbot inicializado com sucesso!")
@@ -67,8 +66,10 @@ app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 class Question(BaseModel):
     question: str
 
-def run_scraping_in_thread():
-    """Função síncrona para ser executada em um thread."""
+class UrlPayload(BaseModel):
+    url: str
+
+def run_scraping_full_in_thread():
     global scraping_in_progress
     try:
         scrape_to_text(progress_tracker=scraping_progress)
@@ -78,26 +79,51 @@ def run_scraping_in_thread():
     finally:
         scraping_in_progress = False
 
+def run_single_scraping_in_thread(url):
+    global scraping_in_progress
+    try:
+        scrape_single_page_to_text(url, progress_tracker=scraping_progress)
+        initialize_chatbot()
+    except Exception as e:
+        print(f"Erro ao executar a tarefa de scraping de URL: {e}")
+    finally:
+        scraping_in_progress = False
+
 @app.on_event("startup")
 def on_startup():
     initialize_chatbot()
 
 @app.get("/scrape")
-def start_scraping():
+def start_full_scrape():
     global scraping_in_progress, chatbot_ready, scraping_progress
     if scraping_in_progress:
         raise HTTPException(status_code=409, detail="Scraping já está em andamento.")
     
-    # Reinicia o progresso e o estado
     scraping_progress = {"pages_scraped": 0, "total_pages": 50} 
     scraping_in_progress = True
     chatbot_ready = False
-    print("Iniciando o processo de scraping...")
-
-    # Executa a função síncrona em um thread separado
-    executor.submit(run_scraping_in_thread)
+    
+    executor.submit(run_scraping_full_in_thread)
     
     return {"status": "success", "message": "Scraping iniciado. O chatbot estará disponível em breve."}
+
+@app.post("/scrape_url")
+def start_single_scrape(payload: UrlPayload):
+    global scraping_in_progress, chatbot_ready, scraping_progress
+    if scraping_in_progress:
+        raise HTTPException(status_code=409, detail="Scraping já está em andamento.")
+
+    url = payload.url
+    if not url.startswith(('http://', 'https://')):
+        url = f"https://{url}"
+
+    scraping_progress = {"pages_scraped": 0, "total_pages": 1}
+    scraping_in_progress = True
+    chatbot_ready = False
+    
+    executor.submit(run_single_scraping_in_thread, url)
+    
+    return {"status": "success", "message": f"Scraping da página {url} iniciado. O chatbot será atualizado."}
 
 @app.get("/status")
 def get_status():

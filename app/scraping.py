@@ -47,11 +47,9 @@ def scrape_to_text(max_pages=50, progress_tracker=None):
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'html.parser')
-            # Remove scripts, estilos e outros elementos irrelevantes
             for script_or_style in soup(['script', 'style', 'nav', 'footer', 'form', 'header']):
                 script_or_style.decompose()
 
-            # Extrai o texto visível e o salva em um arquivo .txt
             text = soup.get_text(separator=' ', strip=True)
             
             sanitized_name = re.sub(r'[\s\?&:=/#!]', '_', url.replace(BASE_URL, "")).replace('__', '_').strip('_')
@@ -66,7 +64,6 @@ def scrape_to_text(max_pages=50, progress_tracker=None):
             
             print(f"Texto salvo em: {output_path}")
 
-            # Encontra novos links para navegação
             for link in soup.find_all('a', href=True):
                 absolute_url = urljoin(BASE_URL, link.get('href'))
                 if is_internal_url(absolute_url, BASE_URL) and absolute_url not in visited_urls:
@@ -76,3 +73,42 @@ def scrape_to_text(max_pages=50, progress_tracker=None):
             print(f"Erro ao acessar {url}: {e}")
             
     print("Download de textos concluído.")
+
+def scrape_single_page_to_text(url, progress_tracker=None):
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
+    if progress_tracker:
+        progress_tracker["pages_scraped"] = 0
+        progress_tracker["total_pages"] = 1
+        
+    print(f"Raspando URL única: {url}")
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        for script_or_style in soup(['script', 'style', 'nav', 'footer', 'form', 'header']):
+            script_or_style.decompose()
+
+        text = soup.get_text(separator=' ', strip=True)
+        
+        sanitized_name = re.sub(r'[\s\?&:=/#!]', '_', url.replace(BASE_URL, "")).replace('__', '_').strip('_')
+        # Adiciona um timestamp para evitar colisão de nomes
+        if not sanitized_name:
+            import time
+            sanitized_name = f"single_page_{int(time.time())}"
+        
+        file_name = f"{sanitized_name}.txt"
+        output_path = os.path.join(OUTPUT_DIR, file_name)
+
+        with open(output_path, "w", encoding="utf-8") as text_file:
+            text_file.write(text)
+        
+        print(f"Texto salvo em: {output_path}")
+
+        if progress_tracker:
+            progress_tracker["pages_scraped"] = 1
+            progress_tracker["total_pages"] = 1
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Erro ao acessar {url}: {e}")

@@ -103,3 +103,43 @@ header {
     background-color: #ccc;
     cursor: not-allowed;
 }
+
+.action-container {
+    padding: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-top: 1px solid #ddd;
+    gap: 10px; /* Espaço entre os elementos */
+    flex-wrap: wrap; /* Permite que os elementos quebrem a linha */
+}
+
+#new-url-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+}
+
+#add-url-btn {
+    background-color: #008CBA; /* Cor secundária, por exemplo, azul claro */
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+#scrape-btn {
+    background-color: #004d99; /* Cor principal */
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+
+.disabled-btn {
+    background-color: #ccc !important;
+    cursor: not-allowed !important;
+}

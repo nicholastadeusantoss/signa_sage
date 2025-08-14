@@ -1,11 +1,12 @@
+# app/chatbot.py
 import os
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter # Mudamos para essa classe
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import OpenAI
 from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import TextLoader
-from langchain.prompts import PromptTemplate # Adicionado
+from langchain.prompts import PromptTemplate
 from pathlib import Path
 
 # Adiciona um prompt de segurança e anti-alucinação
@@ -48,10 +49,12 @@ class SignaChatbot:
         if not docs:
             raise ValueError("A lista de documentos está vazia. Nenhuma informação foi extraída dos arquivos de texto.")
 
-        text_splitter = CharacterTextSplitter(
-            separator="\n\n",
-            chunk_size=1000,
-            chunk_overlap=100,
+        # AVISO: AVISO: AVISO: Esta parte foi ajustada!
+        # Usando um separador mais inteligente para evitar chunks muito grandes
+        text_splitter = RecursiveCharacterTextSplitter(
+            separators=[".", "?", "!", "\n\n"],
+            chunk_size=750,
+            chunk_overlap=75,
             length_function=len
         )
         split_docs = text_splitter.split_documents(docs)
@@ -67,9 +70,9 @@ class SignaChatbot:
         self.qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
-            retriever=self.docsearch.as_retriever(search_kwargs={"k": 2}),
+            retriever=self.docsearch.as_retriever(search_kwargs={"k": 1}),
             verbose=True,
-            chain_type_kwargs={"prompt": PROMPT} # O prompt é injetado aqui
+            chain_type_kwargs={"prompt": PROMPT}
         )
 
     def ask(self, question: str):

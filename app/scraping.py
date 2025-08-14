@@ -93,7 +93,6 @@ def scrape_single_page_to_text(url, progress_tracker=None):
         text = soup.get_text(separator=' ', strip=True)
         
         sanitized_name = re.sub(r'[\s\?&:=/#!]', '_', url.replace(BASE_URL, "")).replace('__', '_').strip('_')
-        # Adiciona um timestamp para evitar colisão de nomes
         if not sanitized_name:
             import time
             sanitized_name = f"single_page_{int(time.time())}"

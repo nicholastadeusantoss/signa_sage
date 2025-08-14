@@ -1,6 +1,6 @@
 # app/chatbot.py
 import os
-from langchain.text_splitter import RecursiveCharacterTextSplitter # Mudamos para essa classe
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import OpenAI
 from langchain.chains import RetrievalQA
@@ -49,8 +49,7 @@ class SignaChatbot:
         if not docs:
             raise ValueError("A lista de documentos está vazia. Nenhuma informação foi extraída dos arquivos de texto.")
 
-        # AVISO: AVISO: AVISO: Esta parte foi ajustada!
-        # Usando um separador mais inteligente para evitar chunks muito grandes
+        
         text_splitter = RecursiveCharacterTextSplitter(
             separators=[".", "?", "!", "\n\n"],
             chunk_size=750,

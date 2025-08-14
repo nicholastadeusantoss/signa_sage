@@ -6,7 +6,7 @@ from app.scraping import scrape_to_text
 
 client = TestClient(app)
 
-# Fixture para limpar a pasta de dados antes e depois de cada teste
+
 @pytest.fixture(autouse=True)
 def clean_data_folder():
     if os.path.exists("data/txt"):
@@ -30,13 +30,13 @@ def test_scrape_to_text_creates_files():
     """
     Testa se a função de scraping cria arquivos corretamente.
     """
-    # Define o número de páginas para o teste
+ 
     max_pages_to_test = 2
     
-    # Executa a função de scraping diretamente
+
     scrape_to_text(max_pages=max_pages_to_test)
     
-    # Verifica se a pasta de dados foi criada e contém arquivos
+
     assert os.path.exists("data/txt")
     assert len(os.listdir("data/txt")) == max_pages_to_test
 
@@ -48,6 +48,5 @@ def test_scrape_to_text_with_zero_pages():
     
     scrape_to_text(max_pages=max_pages_to_test)
     
-    # Verifica se a pasta está vazia
     if os.path.exists("data/txt"):
         assert len(os.listdir("data/txt")) == 0

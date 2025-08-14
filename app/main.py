@@ -8,11 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-
 from .chatbot import SignaChatbot
 from .scraping import scrape_to_text, scrape_single_page_to_text
 
-# Variáveis globais para gerenciar o estado e o progresso
+
 signa_chatbot = None
 chatbot_ready = False
 scraping_in_progress = False
@@ -45,10 +44,8 @@ if not OPENAI_API_KEY:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Código executado na inicialização
     initialize_chatbot()
     yield
-    # Código executado no encerramento
     if executor:
         executor.shutdown(wait=True)
 
@@ -56,7 +53,7 @@ app = FastAPI(
     title="Signa Chatbot",
     description="API para o chatbot da empresa Signa.",
     version="1.0.0",
-    lifespan=lifespan # Usa o lifespan event handler
+    lifespan=lifespan 
 )
 
 # Adiciona o middleware de CORS
@@ -69,9 +66,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define o caminho absoluto para o diretório frontend
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 frontend_path = str(BASE_DIR / "frontend")
+
 app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 class Question(BaseModel):

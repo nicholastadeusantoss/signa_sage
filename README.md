@@ -31,8 +31,8 @@ Siga estes passos para ter a aplicação rodando em poucos minutos:
 
 1.  **Clone o Repositório:**
     ```bash
-    git clone [url_do_seu_repositorio]
-    cd signa_chatbot
+    git clone https://github.com/nicholastadeusantoss/signa_sage
+    cd signa_sage
     ```
 
 2.  **Configure a Chave da API da OpenAI:**

@@ -7,23 +7,33 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="chatbot-container">
-        <header>
-            <h1>Chatbot Signa</h1>
-        </header>
-
-        <div class="chat-window" id="chat-window">
-            </div>
-
-        <div class="status-message" id="status-message"></div>
-        <div class="action-container">
-            <input type="url" id="new-url-input" placeholder="Insira um link para adicionar à base...">
-            <button id="add-url-btn" class="secondary-btn">Adicionar Link</button>
-            <button id="scrape-btn">Atualizar Base</button>
+    <div class="main-container">
+        <div class="instructions-panel">
+            <h2>Instruções de Uso</h2>
+            <p>Este é um chatbot para responder a dúvidas sobre a empresa Signa. Ele utiliza um modelo de IA que se baseia em informações do site da empresa.</p>
+            <h3>Como Usar:</h3>
+            <ol>
+                <li><strong>Atualizar a Base de Conhecimento:</strong><ol></ol> Se a base de dados estiver vazia, clique em "Atualizar Base". O chatbot irá raspar o site da Signa e criar uma base de dados para conversação.</li>
+                <li><strong>Adicionar um Link Específico:</strong><ol></ol> Você pode inserir um link específico na caixa de texto e clicar em "Adicionar Link" para incluir somente essa página na base de conhecimento.</li>
+                <li><strong>Iniciar a Conversa:</strong><ol></ol> Após a base de dados ser atualizada, o chat será liberado e você poderá fazer perguntas sobre a empresa, seus produtos e serviços.</li>
+            </ol>
         </div>
-        <div class="input-container">
-            <input type="text" id="user-input" placeholder="Digite sua pergunta...">
-            <button id="send-btn">Enviar</button>
+        <div class="chatbot-container">
+            <header>
+                <h1>Chatbot Signa</h1>
+            </header>
+            <div class="chat-window" id="chat-window">
+                </div>
+            <div class="status-message" id="status-message"></div>
+            <div class="action-container">
+                <input type="url" id="new-url-input" placeholder="Insira um link para adicionar à base...">
+                <button id="add-url-btn">Adicionar Link</button>
+                <button id="scrape-btn">Atualizar Base</button>
+            </div>
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Digite sua pergunta...">
+                <button id="send-btn">Enviar</button>
+            </div>
         </div>
     </div>
     <script src="script.js"></script>

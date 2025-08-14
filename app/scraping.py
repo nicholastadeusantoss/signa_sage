@@ -22,7 +22,7 @@ PRIORITY_URLS = [
 def is_internal_url(url, base_url):
     return urlparse(url).netloc == urlparse(base_url).netloc
 
-def scrape_to_text(max_pages=50, progress_tracker=None):
+def scrape_to_text(max_pages=15, progress_tracker=None):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     urls_to_visit = deque(PRIORITY_URLS)
     if BASE_URL not in urls_to_visit:

@@ -101,7 +101,7 @@ def run_single_scraping_in_thread(url):
         scraping_in_progress = False
 
 @app.get("/scrape")
-def start_full_scrape(max_pages: int = Query(50)):
+def start_full_scrape(max_pages: int = Query(15)):
     global scraping_in_progress, chatbot_ready, scraping_progress
     if scraping_in_progress:
         raise HTTPException(status_code=409, detail="Scraping já está em andamento.")

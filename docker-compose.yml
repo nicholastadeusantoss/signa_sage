@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  chatbot_signa:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Monta o diretório local no contêiner para que as alterações
+      # no seu código local sejam refletidas sem precisar reconstruir a imagem.
+      - .:/app
+    environment:
+      # Passa a sua chave de API para o contêiner de forma segura.
+      - OPENAI_API_KEY=${OPENAI_API_KEY}

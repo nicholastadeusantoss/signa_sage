@@ -1,13 +1,24 @@
+# Arquivos de bytecode do Python
 __pycache__/
 *.pyc
+
+# Ambiente virtual
 .venv/
 venv/
 env/
-*.egg-info/
-data/pdfs/
+
+# Dados gerados e de cache
+data/ # Ignora toda a pasta de dados e seus conteúdos
+.pytest_cache/
 .chroma/
 chroma.sqlite3
+
+# Dados sensíveis
 .env
-.pytest_cache/
+
+# Arquivos de sistema operacional
 .DS_Store
 Thumbs.db
+
+# Arquivos de editores
+*.swp

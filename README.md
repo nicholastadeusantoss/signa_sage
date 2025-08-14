@@ -61,6 +61,7 @@ Siga estes passos para ter a aplicação rodando em poucos minutos:
     * Um indicador de progresso será exibido. O processo pode levar alguns minutos.
 3.  **Chat Ativo:** Quando o scraping for concluído e o chatbot for inicializado, a interface do chat será liberada.
 4.  **Interagir:** Você pode fazer perguntas sobre a Signa e seus produtos.
+5. **Adicionando mais páginas na base de conhecimento:** Caso queira, você pode adicionar mais páginas na base de conhecimento, só é necessário colar o link no espaço onde diz "Insira um link para adicionar à base..." e esperar o Scraping.
 
 ## Testes da Aplicação
 
